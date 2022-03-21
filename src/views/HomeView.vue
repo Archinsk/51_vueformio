@@ -33,6 +33,7 @@
             <button
               v-if="formLayout.active || action.alwaysActive"
               :key="action.id"
+              type="button"
               class="btn btn-block btn-primary mb-2"
               @click="invokeAction(action.id)"
             >
@@ -92,8 +93,8 @@ export default {
         orderId: "",
         status: "",
       },
-      formSubmission: null,
       isValidFormData: false,
+      isFirstLoad: true,
     };
   },
   methods: {
@@ -102,9 +103,8 @@ export default {
       this.isResponse = false;
       this.isLoading = true;
       this.loadingComment = "Загрузка формы заявления";
-      setTimeout(this.getForm, 3000);
+      setTimeout(this.getForm, 1000);
     },
-
     getForm() {
       axios
         .get(this.url + "serv/get-appData?id=" + this.measure.id)
@@ -121,9 +121,6 @@ export default {
           this.isLoading = false;
           this.isAlertVisible = true;
           setTimeout(this.hideAlert, 3000);
-        })
-        .then(() => {
-          console.log(this.$refs.vueForm);
         });
     },
 
@@ -131,17 +128,27 @@ export default {
       this.isAlertVisible = false;
     },
 
-    invokeAction(actionId) {
-      this.isResponse = false;
-      this.isLoading = true;
-      this.loadingComment = "Отправка данных заявления";
-      setTimeout(this.invoke, 3000, actionId);
+    validateForm() {
+      console.log("Валидация формы");
+      return this.$refs.vueForm.formio.checkValidity(
+        this.$refs.vueForm.formio.submission.data
+      );
     },
 
+    invokeAction(actionId) {
+      console.log("Выполнение действия");
+      this.isFirstLoad = false;
+      this.isValidFormData = this.validateForm();
+      if (this.isValidFormData) {
+        this.isResponse = false;
+        this.isLoading = true;
+        this.loadingComment = "Отправка данных заявления";
+        setTimeout(this.invoke, 1000, actionId);
+      } else {
+        this.$refs.vueForm.formio.submit();
+      }
+    },
     invoke(actionId) {
-      // this.isFirstLoad = false;
-      // if (this.isValidFormData) {
-      // this.isRequested = true;
       const request = {
         actionId: actionId,
         userId: 13,
@@ -163,14 +170,9 @@ export default {
           this.isResponse = true;
           this.isLoading = false;
           this.isAlertVisible = true;
+          this.isFirstLoad = true;
           setTimeout(this.hideAlert, 3000);
-        })
-        .then(() => {
-          console.log(this.$refs.vueForm);
         });
-      // } else {
-      //   this.validateForm();
-      // }
     },
   },
 };
