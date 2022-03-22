@@ -11,7 +11,7 @@
     <!--    <Form src="https://dkpwtpfnbsdzufs.form.io/fioformwithdata" />-->
     <template v-if="isResponse">
       <div v-if="isAlertVisible" class="alert alert-success" role="alert">
-        Форма заявления успешно загружена!
+        {{ successComment }}
       </div>
       <h4 class="text-center">{{ formLayout.form.name }}</h4>
       <div class="row">
@@ -30,15 +30,26 @@
           class="col-2"
         >
           <template v-for="action of formLayout.form.actions">
-            <button
-              v-if="formLayout.active || action.alwaysActive"
-              :key="action.id"
-              type="button"
-              class="btn btn-block btn-primary mb-2"
-              @click="invokeAction(action.id)"
-            >
-              {{ action.name }}
-            </button>
+            <template v-if="formLayout.active || action.alwaysActive">
+              <button
+                v-if="action.backAction"
+                :key="action.id"
+                type="button"
+                class="btn btn-block btn-primary mb-2"
+                @click="invokeAction(action.id, true)"
+              >
+                {{ action.name }}
+              </button>
+              <button
+                v-else
+                :key="action.id"
+                type="button"
+                class="btn btn-block btn-primary mb-2"
+                @click="invokeAction(action.id)"
+              >
+                {{ action.name }}
+              </button>
+            </template>
           </template>
         </div>
       </div>
@@ -65,6 +76,7 @@ export default {
   components: {
     Form,
   },
+
   data() {
     return {
       url: "http://192.168.18.171:8080/api/",
@@ -78,6 +90,7 @@ export default {
       // },
       isLoading: false,
       loadingComment: "Загрузка формы заявления",
+      successComment: "Форма заявления успешно загружена!",
       isResponse: false,
       isAlertVisible: false,
       formLayout: {
@@ -97,6 +110,7 @@ export default {
       isFirstLoad: true,
     };
   },
+
   methods: {
     // Стартовая форма заявления
     getStartForm() {
@@ -135,7 +149,7 @@ export default {
       );
     },
 
-    invokeAction(actionId) {
+    invokeAction(actionId, isBackAction = false) {
       console.log("Выполнение действия");
       this.isFirstLoad = false;
       this.isValidFormData = this.validateForm();
@@ -143,12 +157,12 @@ export default {
         this.isResponse = false;
         this.isLoading = true;
         this.loadingComment = "Отправка данных заявления";
-        setTimeout(this.invoke, 1000, actionId);
+        setTimeout(this.invoke, 1000, actionId, isBackAction);
       } else {
         this.$refs.vueForm.formio.submit();
       }
     },
-    invoke(actionId) {
+    invoke(actionId, isBackAction = false) {
       const request = {
         actionId: actionId,
         userId: 13,
@@ -158,13 +172,22 @@ export default {
       axios
         .post(this.url + "app/action-invoke", request)
         .then((response) => {
-          console.log("Следующая форма");
+          console.log("Ответ на экшн");
           console.log(response);
-          // this.appForm = response.data.applicationDTO;
-          let nextForm = response.data.applicationDTO;
-          nextForm.data = JSON.parse(nextForm.data);
-          nextForm.form.scheme = JSON.parse(nextForm.form.scheme);
-          this.formLayout = nextForm;
+          if (response.data.applicationDTO.form) {
+            if (isBackAction) {
+              this.$router.push("/registry");
+            } else {
+              this.getNextForm(response);
+            }
+          } else {
+            let responseData = JSON.parse(response.data.applicationDTO.data);
+            console.log("Распарсенные данные");
+            console.log(responseData);
+            console.log("id запрашиваемого заявления");
+            console.log(responseData.params_handler_application);
+            this.getAppExtData(responseData.params_handler_application);
+          }
         })
         .then(() => {
           this.isResponse = true;
@@ -172,6 +195,32 @@ export default {
           this.isAlertVisible = true;
           this.isFirstLoad = true;
           setTimeout(this.hideAlert, 3000);
+        });
+    },
+
+    // Переход к следующей форме (стандартное дейтвие)
+    getNextForm(response) {
+      console.log("Следующая форма");
+      console.log(response);
+      let nextForm = response.data.applicationDTO;
+      nextForm.data = JSON.parse(nextForm.data);
+      nextForm.form.scheme = JSON.parse(nextForm.form.scheme);
+      this.formLayout = nextForm;
+      this.successComment = "Заявление отправлено!";
+    },
+    // Запрос заявления id закрытого контура
+    getAppExtData(id) {
+      console.log("Сохранение заявления");
+      axios
+        .get(this.url + "app/get-appExtData?extId=" + id)
+        .then((response) => {
+          console.log("Ответ на запрос заявления");
+          console.log(response);
+          const newForm = response.data;
+          newForm.data = JSON.parse(newForm.data);
+          newForm.form.scheme = JSON.parse(newForm.form.scheme);
+          this.formLayout = newForm;
+          this.successComment = "Заявление сохранено!";
         });
     },
   },
