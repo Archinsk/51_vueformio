@@ -143,7 +143,6 @@ export default {
     },
 
     validateForm() {
-      console.log("Валидация формы");
       return this.$refs.vueForm.formio.checkValidity(
         this.$refs.vueForm.formio.submission.data
       );
@@ -153,10 +152,11 @@ export default {
       console.log("Выполнение действия");
       this.isFirstLoad = false;
       this.isValidFormData = this.validateForm();
+      console.log("Валидность формы:" + this.isValidFormData);
       if (this.isValidFormData) {
+        this.loadingComment = "Отправка данных заявления";
         this.isResponse = false;
         this.isLoading = true;
-        this.loadingComment = "Отправка данных заявления";
         setTimeout(this.invoke, 1000, actionId, isBackAction);
       } else {
         this.$refs.vueForm.formio.submit();
@@ -174,20 +174,20 @@ export default {
         .then((response) => {
           console.log("Ответ на экшн");
           console.log(response);
-          if (response.data.applicationDTO.form) {
-            if (isBackAction) {
-              this.$router.push("/registry");
-            } else {
-              this.getNextForm(response);
-            }
+          // if (response.data.applicationDTO.form) {
+          if (isBackAction) {
+            this.$router.push("/registry");
           } else {
-            let responseData = JSON.parse(response.data.applicationDTO.data);
-            console.log("Распарсенные данные");
-            console.log(responseData);
-            console.log("id запрашиваемого заявления");
-            console.log(responseData.params_handler_application);
-            this.getAppExtData(responseData.params_handler_application);
+            this.getNextForm(response);
           }
+          // } else {
+          //   let responseData = JSON.parse(response.data.applicationDTO.data);
+          //   console.log("Распарсенные данные");
+          //   console.log(responseData);
+          //   console.log("id запрашиваемого заявления");
+          //   console.log(responseData.params_handler_application);
+          //   this.getAppExtData(responseData.params_handler_application);
+          // }
         })
         .then(() => {
           this.isResponse = true;
@@ -209,20 +209,20 @@ export default {
       this.successComment = "Заявление отправлено!";
     },
     // Запрос заявления id закрытого контура
-    getAppExtData(id) {
-      console.log("Сохранение заявления");
-      axios
-        .get(this.url + "app/get-appExtData?extId=" + id)
-        .then((response) => {
-          console.log("Ответ на запрос заявления");
-          console.log(response);
-          const newForm = response.data;
-          newForm.data = JSON.parse(newForm.data);
-          newForm.form.scheme = JSON.parse(newForm.form.scheme);
-          this.formLayout = newForm;
-          this.successComment = "Заявление сохранено!";
-        });
-    },
+    // getAppExtData(id) {
+    //   console.log("Сохранение заявления");
+    //   axios
+    //     .get(this.url + "app/get-appExtData?extId=" + id)
+    //     .then((response) => {
+    //       console.log("Ответ на запрос заявления");
+    //       console.log(response);
+    //       const newForm = response.data;
+    //       newForm.data = JSON.parse(newForm.data);
+    //       newForm.form.scheme = JSON.parse(newForm.form.scheme);
+    //       this.formLayout = newForm;
+    //       this.successComment = "Заявление сохранено!";
+    //     });
+    // },
   },
 };
 </script>
