@@ -174,20 +174,24 @@ export default {
         .then((response) => {
           console.log("Ответ на экшн");
           console.log(response);
-          // if (response.data.applicationDTO.form) {
-          if (isBackAction) {
-            this.$router.push("/registry");
+          if (response.data.responseObject) {
+            let fileApp = JSON.parse(response.data.responseObject);
+            console.log("Объект файла");
+            console.log(fileApp);
+            let link = document.createElement("a");
+            link.setAttribute("download", fileApp.fileName);
+            link.setAttribute(
+              "href",
+              "data:application/octet-stream;base64," + fileApp.fileData
+            );
+            link.click();
           } else {
-            this.getNextForm(response);
+            if (isBackAction) {
+              this.$router.push("/registry");
+            } else {
+              this.getNextForm(response);
+            }
           }
-          // } else {
-          //   let responseData = JSON.parse(response.data.applicationDTO.data);
-          //   console.log("Распарсенные данные");
-          //   console.log(responseData);
-          //   console.log("id запрашиваемого заявления");
-          //   console.log(responseData.params_handler_application);
-          //   this.getAppExtData(responseData.params_handler_application);
-          // }
         })
         .then(() => {
           this.isResponse = true;
